@@ -3,6 +3,7 @@ import { AnalyzeRequestSchema, FallbackReason } from "@/lib/schema";
 import { checkSafety } from "@/lib/safety";
 import { checkClarify } from "@/lib/clarify";
 import { generateReport } from "@/lib/llm";
+import { classifyFallbackReason } from "@/lib/errors";
 import { INTERNSHIP_FALLBACK_REPORT } from "@/lib/fallback/internshipReport";
 
 export async function POST(req: NextRequest) {
@@ -86,26 +87,7 @@ export async function POST(req: NextRequest) {
         report,
       });
     } catch (llmError) {
-      const errMessage = (llmError as Error).message || "";
-      let fallbackReason: FallbackReason = "model_error";
-
-      if (errMessage.includes("MISSING_API_KEY")) {
-        fallbackReason = "no_key";
-      } else if (errMessage.includes("401") || errMessage.includes("API key not valid") || errMessage.includes("auth")) {
-        fallbackReason = "auth_error";
-      } else if (errMessage.includes("429") || errMessage.includes("quota") || errMessage.includes("RESOURCE_EXHAUSTED")) {
-        fallbackReason = "rate_limited";
-      } else if (errMessage.includes("TIMEOUT") || errMessage.includes("timed out")) {
-        fallbackReason = "timeout";
-      } else if (errMessage.includes("INVALID_JSON") || errMessage.includes("JSON")) {
-        fallbackReason = "bad_json";
-      } else if (errMessage.includes("ZodError") || errMessage.includes("schema")) {
-        fallbackReason = "schema_invalid";
-      } else if (errMessage.includes("guard")) {
-        fallbackReason = "guard_failed";
-      } else if (errMessage.includes("fetch") || errMessage.includes("network") || errMessage.includes("ENOTFOUND")) {
-        fallbackReason = "network";
-      }
+      const fallbackReason: FallbackReason = classifyFallbackReason(llmError);
 
       // Safe server-side logging without leaking key or user text
       console.log(`[Analyze] Fallback served: reason=${fallbackReason}`);

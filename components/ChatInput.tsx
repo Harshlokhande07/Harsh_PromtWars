@@ -9,8 +9,6 @@ import {
   SlidersHorizontal,
   Mic,
   MicOff,
-  BookmarkPlus,
-  Compass,
 } from "lucide-react";
 
 interface ChatInputProps {
@@ -109,16 +107,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <div className="w-full max-w-2xl mx-auto space-y-2">
       {/* Floating Main Input Card */}
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow p-4 space-y-3">
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow p-4 space-y-3">
+        {/* Accessible label for form control */}
+        <label htmlFor="decision-input" className="sr-only">
+          Describe your decision dilemma
+        </label>
+
         {/* Multi-line Textarea */}
         <textarea
+          id="decision-input"
           rows={3}
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
           placeholder="Describe your decision, your options, and why you are leaning a certain way..."
-          className="w-full text-sm text-slate-800 placeholder:text-slate-400 bg-transparent resize-none focus:outline-none leading-relaxed"
+          className="w-full text-sm text-slate-900 placeholder:text-slate-500 bg-transparent resize-none focus:outline-none leading-relaxed"
+          aria-label="Describe your decision dilemma"
         />
 
         {/* Action Toolbar Inside Box */}
@@ -128,22 +133,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => setDeepResearchMode(!deepResearchMode)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none min-h-[36px] ${
                 deepResearchMode
                   ? "bg-purple-50 text-purple-700 border border-purple-200 shadow-xs"
-                  : "bg-slate-100/70 text-slate-500 border border-slate-200/60"
+                  : "bg-slate-100/70 text-slate-600 border border-slate-200/60"
               }`}
+              aria-pressed={deepResearchMode}
+              aria-label="Toggle Deeper Research mode"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" aria-hidden="true" />
               <span>Deeper Research</span>
             </button>
 
             <button
               type="button"
-              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50/50 rounded-lg transition-colors"
+              className="p-2 text-slate-500 hover:text-purple-600 hover:bg-purple-50/50 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none min-h-[36px] min-w-[36px] flex items-center justify-center"
+              aria-label="Socratic inquiry tips"
               title="Socratic inquiry tips"
             >
-              <Lightbulb className="w-4 h-4" />
+              <Lightbulb className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -151,10 +159,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+              className="p-2 text-slate-500 hover:text-slate-800 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none min-h-[36px] min-w-[36px] flex items-center justify-center"
+              aria-label="Analysis parameters"
               title="Analysis parameters"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
             </button>
 
             {isVoiceSupported && (
@@ -162,14 +171,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 type="button"
                 onClick={toggleVoice}
                 disabled={isLoading}
-                className={`p-1.5 rounded-lg transition-all ${
+                className={`p-2 rounded-lg transition-all focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none min-h-[36px] min-w-[36px] flex items-center justify-center ${
                   isListening
                     ? "bg-rose-500 text-white animate-pulse"
-                    : "text-slate-400 hover:text-slate-600"
+                    : "text-slate-500 hover:text-slate-800"
                 }`}
+                aria-label={isListening ? "Stop voice dictation" : "Start voice dictation"}
                 title={isListening ? "Stop listening" : "Dictate decision"}
               >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {isListening ? (
+                  <MicOff className="w-4 h-4" aria-hidden="true" />
+                ) : (
+                  <Mic className="w-4 h-4" aria-hidden="true" />
+                )}
               </button>
             )}
 
@@ -178,38 +192,46 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               onClick={onSubmit}
               disabled={!input.trim() || isLoading}
-              className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-400 text-white flex items-center justify-center shadow-md shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 disabled:shadow-none transition-all"
+              className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-400 text-white flex items-center justify-center shadow-md shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 disabled:shadow-none transition-all focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+              aria-label="Analyze decision and surface blind spots"
             >
-              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+              <ArrowUp className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Lower Bar: Saved prompts link & Attach file */}
-      <div className="flex items-center justify-between px-2 text-xs text-slate-500">
+      <div className="flex items-center justify-between px-2 text-xs text-slate-600">
         <button
           type="button"
           onClick={() => setShowSavedPrompts(!showSavedPrompts)}
-          className="inline-flex items-center gap-1.5 font-medium hover:text-purple-700 transition-colors"
+          className="inline-flex items-center gap-1.5 font-medium hover:text-purple-700 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 rounded p-1"
+          aria-expanded={showSavedPrompts}
+          aria-label="Toggle Quick Decision Templates"
         >
-          <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+          <Sparkles className="w-3.5 h-3.5 text-purple-600" aria-hidden="true" />
           <span>+ Saved prompts</span>
         </button>
 
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 font-medium hover:text-slate-800 transition-colors"
+          className="inline-flex items-center gap-1.5 font-medium hover:text-slate-900 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 rounded p-1"
+          aria-label="Attach reference document or notes"
         >
-          <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+          <Paperclip className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
           <span>Attach file</span>
         </button>
       </div>
 
       {/* Expandable Saved Prompts Panel */}
       {showSavedPrompts && (
-        <div className="bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/80 shadow-md space-y-2 text-xs animate-in fade-in duration-200">
-          <span className="font-bold text-slate-400 text-[10px] uppercase">
+        <div
+          className="bg-white/95 backdrop-blur-md rounded-xl p-3 border border-slate-200/80 shadow-md space-y-2 text-xs animate-in fade-in duration-200"
+          role="region"
+          aria-label="Quick Decision Templates"
+        >
+          <span className="font-bold text-slate-500 text-[10px] uppercase">
             Quick Decision Templates
           </span>
           <div className="space-y-1.5">
@@ -220,8 +242,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onClick={() => {
                   onInputChange(p);
                   setShowSavedPrompts(false);
+                  onSelectSavedPrompt?.(p);
                 }}
-                className="w-full text-left p-2 rounded-lg bg-slate-50/70 hover:bg-purple-50 text-slate-700 hover:text-purple-900 transition-colors block"
+                className="w-full text-left p-2.5 rounded-lg bg-slate-50 hover:bg-purple-50 text-slate-800 hover:text-purple-900 transition-colors block focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
               >
                 {p}
               </button>

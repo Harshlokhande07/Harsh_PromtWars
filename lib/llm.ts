@@ -3,8 +3,13 @@ import { Report, ReportSchema } from "./schema";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt";
 import { applyVerdictGuard } from "./guard";
 
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.LLM_TIMEOUT_MS || "25000", 10);
-const DEFAULT_MODEL = process.env.LLM_MODEL || "gemini-1.5-flash";
+import { DEFAULT_LLM_TIMEOUT_MS, DEFAULT_LLM_MODEL } from "./constants";
+
+const DEFAULT_TIMEOUT_MS = parseInt(
+  process.env.LLM_TIMEOUT_MS || String(DEFAULT_LLM_TIMEOUT_MS),
+  10
+);
+const DEFAULT_MODEL = process.env.LLM_MODEL || DEFAULT_LLM_MODEL;
 
 /**
  * Extracts and cleans JSON from raw LLM text response.

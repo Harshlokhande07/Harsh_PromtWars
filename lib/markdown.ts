@@ -8,6 +8,13 @@ function formatStatusTag(status?: string): string {
   return "";
 }
 
+/**
+ * Escapes markdown backtick code fences in user input to prevent layout breakout.
+ */
+function escapeMarkdownFence(text: string): string {
+  return text.replace(/```/g, "\\`\\`\\`");
+}
+
 export function generateMarkdownReport(
   userInput: string,
   report: Report,
@@ -46,7 +53,7 @@ export function generateMarkdownReport(
   // Original input
   lines.push("## Original Decision Context");
   lines.push("```");
-  lines.push(userInput.trim());
+  lines.push(escapeMarkdownFence(userInput.trim()));
   lines.push("```");
   lines.push("");
 

@@ -31,17 +31,20 @@ export const FallbackPill: React.FC<FallbackPillProps> = ({ mode, fallbackReason
 
   return (
     <div
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300 shadow-xs cursor-help select-none"
+      role="status"
+      aria-live="polite"
+      aria-label={tooltipText}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-900 border border-amber-300 shadow-xs cursor-help select-none"
       title={tooltipText}
     >
-      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+      <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" aria-hidden="true" />
       <span className="font-semibold">Demo Fallback Mode</span>
       {fallbackReason && (
-        <span className="text-[10px] text-gray-500 bg-gray-200/80 px-1 py-0.2 rounded font-mono">
+        <span className="text-[10px] text-amber-900 bg-amber-200/80 px-1.5 py-0.5 rounded font-mono font-bold">
           {fallbackReason}
         </span>
       )}
-      <Info className="w-3.5 h-3.5 text-gray-500" />
+      <Info className="w-3.5 h-3.5 text-amber-800" aria-hidden="true" />
     </div>
   );
 };

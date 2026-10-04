@@ -1,18 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Languages, RotateCcw, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
-import { Report, ClarifyResponse, SafetyCard as SafetyCardType } from "@/lib/schema";
-import { ReflectionState, ReflectionStatus } from "@/lib/coverage";
-import {
-  HistoryItem,
-  getHistory,
-  saveHistoryItem,
-  getReflections,
-  saveReflections,
-  getSettings,
-  saveSettings,
-} from "@/lib/storage";
+import { Languages, RotateCcw, ArrowLeft, Sparkles } from "lucide-react";
+import { HistoryItem, getSettings, saveSettings } from "@/lib/storage";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
@@ -25,33 +15,50 @@ import { ErrorState } from "@/components/ErrorState";
 import { ReportView } from "@/components/ReportView";
 import { INTERNSHIP_FALLBACK_REPORT, SAMPLE_INTERNSHIP_INPUT } from "@/lib/fallback/internshipReport";
 import { generateMarkdownReport } from "@/lib/markdown";
+import { DEFAULT_CONFIDENCE_RATING } from "@/lib/constants";
+import { useReflections } from "@/hooks/useReflections";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useDecisionAnalysis } from "@/hooks/useDecisionAnalysis";
 
 export default function HomePage() {
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState<"en" | "hinglish">("en");
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
-  const [report, setReport] = useState<Report | null>(null);
-  const [reflections, setReflections] = useState<ReflectionState>({});
-  const [confidenceBefore, setConfidenceBefore] = useState<number>(5);
-  const [confidenceAfter, setConfidenceAfter] = useState<number>(5);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [clarifyData, setClarifyData] = useState<ClarifyResponse | null>(null);
-  const [safetyData, setSafetyData] = useState<SafetyCardType | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const [historyList, setHistoryList] = useState<HistoryItem[]>([]);
+  const [confidenceBefore, setConfidenceBefore] = useState<number>(DEFAULT_CONFIDENCE_RATING);
+  const [confidenceAfter, setConfidenceAfter] = useState<number>(DEFAULT_CONFIDENCE_RATING);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const mainScrollRef = useRef<HTMLElement>(null);
   const reportSectionRef = useRef<HTMLDivElement>(null);
 
-  // Load initial settings and history
+  // Extracted custom hooks for clean modularity
+  const {
+    reflections,
+    setReflections,
+    handleReflectionChange,
+    loadSessionReflections,
+    resetReflections,
+  } = useReflections(currentSessionId);
+
+  const { historyList, addHistoryItem } = useSessionHistory();
+
+  const {
+    isLoading,
+    report,
+    setReport,
+    clarifyData,
+    safetyData,
+    setSafetyData,
+    errorMessage,
+    clearAnalysisState,
+    analyzeDecision,
+  } = useDecisionAnalysis();
+
+  // Load initial settings and configure mobile drawer
   useEffect(() => {
     try {
       const settings = getSettings();
       setLanguage(settings.language || "en");
-      setHistoryList(getHistory());
 
       if (typeof window !== "undefined" && window.innerWidth < 768) {
         setIsSidebarOpen(false);
@@ -61,23 +68,6 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleReflectionChange = (
-    cardId: string,
-    status?: ReflectionStatus,
-    note?: string
-  ) => {
-    setReflections((prev) => {
-      const updated = {
-        ...prev,
-        [cardId]: { status, note, updatedAt: Date.now() },
-      };
-      if (currentSessionId) {
-        saveReflections(currentSessionId, updated);
-      }
-      return updated;
-    });
-  };
-
   const handleLanguageToggle = () => {
     const nextLang = language === "en" ? "hinglish" : "en";
     setLanguage(nextLang);
@@ -86,57 +76,22 @@ export default function HomePage() {
 
   const handleNewDecision = () => {
     setInput("");
-    setReport(null);
-    setClarifyData(null);
-    setSafetyData(null);
-    setErrorMessage(null);
-    setReflections({});
+    clearAnalysisState();
+    resetReflections();
     setCurrentSessionId("");
   };
 
-  const handleAnalyze = async (customText?: string, force: boolean = false) => {
+  const handleExecuteAnalyze = async (customText?: string, force: boolean = false) => {
     const textToAnalyze = customText || input;
     if (!textToAnalyze.trim()) return;
 
-    setIsLoading(true);
-    setClarifyData(null);
-    setSafetyData(null);
-    setErrorMessage(null);
-
-    const isDemoForced =
-      typeof window !== "undefined" && window.location.search.includes("demo=1");
-
-    const endpoint = isDemoForced ? "/api/analyze?demo=1" : "/api/analyze";
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: textToAnalyze,
-          language,
-          force,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      const data = await res.json();
-
-      if (data.safety) {
-        setSafetyData(data.safety);
-        setReport(null);
-      } else if (data.clarify) {
-        setClarifyData(data.clarify);
-      } else if (data.report) {
-        const sessionId = `session_${Date.now()}`;
+    await analyzeDecision(
+      textToAnalyze,
+      language,
+      force,
+      (newReport, sessionId) => {
         setCurrentSessionId(sessionId);
-        setReport(data.report);
-
-        const loadedReflections = getReflections(sessionId);
-        setReflections(loadedReflections);
+        loadSessionReflections(sessionId);
 
         const newHistoryItem: HistoryItem = {
           id: sessionId,
@@ -144,39 +99,22 @@ export default function HomePage() {
           input: textToAnalyze,
           title: textToAnalyze.slice(0, 60),
           language,
-          mode: data.report.meta?.mode || "live",
-          report: data.report,
-          reflections: loadedReflections,
+          mode: newReport.meta?.mode || "live",
+          report: newReport,
+          reflections: {},
           confidenceBefore,
           confidenceAfter,
         };
-        saveHistoryItem(newHistoryItem);
-        setHistoryList(getHistory());
+        addHistoryItem(newHistoryItem);
 
-        // Scroll to report smoothly
+        // Smooth scroll to report view
         setTimeout(() => {
           if (reportSectionRef.current) {
             reportSectionRef.current.scrollIntoView({ behavior: "smooth" });
           }
         }, 150);
-      } else if (data.error) {
-        setErrorMessage(data.error);
       }
-    } catch (err) {
-      clearTimeout(timeoutId);
-      console.warn("API fallback triggered:", err);
-      setReport({
-        ...INTERNSHIP_FALLBACK_REPORT,
-        meta: {
-          ...INTERNSHIP_FALLBACK_REPORT.meta,
-          language,
-          mode: "fallback",
-          fallbackReason: "network",
-        },
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   const handleSelectHistorySession = (item: HistoryItem) => {
@@ -184,12 +122,9 @@ export default function HomePage() {
     setInput(item.input);
     setReport(item.report);
     setReflections(item.reflections || {});
-    setConfidenceBefore(item.confidenceBefore ?? 5);
-    setConfidenceAfter(item.confidenceAfter ?? 5);
+    setConfidenceBefore(item.confidenceBefore ?? DEFAULT_CONFIDENCE_RATING);
+    setConfidenceAfter(item.confidenceAfter ?? DEFAULT_CONFIDENCE_RATING);
     setLanguage(item.language || "en");
-    setClarifyData(null);
-    setSafetyData(null);
-    setErrorMessage(null);
 
     setTimeout(() => {
       if (reportSectionRef.current) {
@@ -238,9 +173,17 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center">
+      {/* Skip to Main Content Link for Keyboard Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-md focus:outline-none focus:ring-2 focus:ring-white"
+      >
+        Skip to main content
+      </a>
+
       {/* Central Floating Card Container */}
       <div className="w-full max-w-6xl mx-auto rounded-3xl sm:rounded-[32px] glass-canvas overflow-hidden min-h-[90vh] flex flex-col md:flex-row shadow-2xl transition-all">
-        {/* Left Collapsible Sidebar */}
+        {/* Left Collapsible Sidebar Navigation */}
         <Sidebar
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -253,8 +196,10 @@ export default function HomePage() {
 
         {/* Right Main Content Panel */}
         <main
+          id="main-content"
           ref={mainScrollRef}
-          className="flex-1 flex flex-col justify-between p-3.5 sm:p-6 lg:p-8 overflow-y-auto max-h-[92vh] overflow-x-hidden"
+          tabIndex={-1}
+          className="flex-1 flex flex-col justify-between p-3.5 sm:p-6 lg:p-8 overflow-y-auto max-h-[92vh] overflow-x-hidden focus:outline-none"
         >
           <div className="space-y-6 w-full">
             {/* Top Bar Header */}
@@ -270,14 +215,18 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={handleNewDecision}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none min-h-[36px]"
+                  aria-label="Start new decision session"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 text-purple-600" />
+                  <ArrowLeft className="w-3.5 h-3.5 text-purple-600" aria-hidden="true" />
                   <span>Start New Decision</span>
                 </button>
 
-                <div className="flex items-center gap-1.5 text-xs text-purple-700 font-semibold bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
-                  <Sparkles className="w-3.5 h-3.5" />
+                <div
+                  className="flex items-center gap-1.5 text-xs text-purple-700 font-semibold bg-purple-50 px-3 py-1 rounded-full border border-purple-100"
+                  aria-live="polite"
+                >
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>Viewing Socratic Analysis</span>
                 </div>
               </div>
@@ -289,30 +238,33 @@ export default function HomePage() {
             )}
 
             {/* Prominent Floating Input Box */}
-            <section className="w-full">
+            <section className="w-full" aria-label="Decision Input Form">
               <ChatInput
                 input={input}
                 onInputChange={setInput}
-                onSubmit={() => handleAnalyze()}
+                onSubmit={() => handleExecuteAnalyze()}
                 isLoading={isLoading}
                 onSelectSavedPrompt={(promptText) => {
                   setInput(promptText);
-                  handleAnalyze(promptText);
+                  handleExecuteAnalyze(promptText);
                 }}
               />
             </section>
 
             {/* Clarify Step (Shows immediately below input when triggered) */}
             {clarifyData && (
-              <div className="max-w-2xl mx-auto w-full animate-in fade-in duration-300">
+              <div
+                className="max-w-2xl mx-auto w-full animate-in fade-in duration-300"
+                aria-live="polite"
+              >
                 <ClarifyStep
                   clarifyData={clarifyData}
                   originalText={input}
                   onContinueWithAnswers={(enriched) => {
                     setInput(enriched);
-                    handleAnalyze(enriched, true);
+                    handleExecuteAnalyze(enriched, true);
                   }}
-                  onForceContinue={() => handleAnalyze(input, true)}
+                  onForceContinue={() => handleExecuteAnalyze(input, true)}
                   isLoading={isLoading}
                 />
               </div>
@@ -320,17 +272,20 @@ export default function HomePage() {
 
             {/* Safety Card (Shows immediately below input when triggered) */}
             {safetyData && (
-              <div className="max-w-2xl mx-auto w-full animate-in fade-in duration-300">
+              <div
+                className="max-w-2xl mx-auto w-full animate-in fade-in duration-300"
+                aria-live="assertive"
+              >
                 <SafetyCard safetyData={safetyData} onReset={() => setSafetyData(null)} />
               </div>
             )}
 
-            {/* 3 Quick Starter Cards (shown on empty canvas) */}
+            {/* 5 Quick Starter Cards (shown on empty canvas) */}
             {!report && !isLoading && !clarifyData && !safetyData && (
               <StarterCards
                 onSelectStarter={(starterText) => {
                   setInput(starterText);
-                  handleAnalyze(starterText);
+                  handleExecuteAnalyze(starterText);
                 }}
                 disabled={isLoading}
               />
@@ -338,17 +293,21 @@ export default function HomePage() {
 
             {/* Skeletons Loading */}
             {isLoading && (
-              <div className="max-w-3xl mx-auto w-full pt-4">
+              <div
+                className="max-w-3xl mx-auto w-full pt-4"
+                aria-live="polite"
+                aria-label="Analyzing decision..."
+              >
                 <Skeletons />
               </div>
             )}
 
             {/* Error State */}
             {errorMessage && (
-              <div className="max-w-2xl mx-auto w-full">
+              <div className="max-w-2xl mx-auto w-full" aria-live="assertive">
                 <ErrorState
                   error={errorMessage}
-                  onRetry={() => handleAnalyze()}
+                  onRetry={() => handleExecuteAnalyze()}
                   onFallback={() => setReport(INTERNSHIP_FALLBACK_REPORT)}
                 />
               </div>
@@ -356,7 +315,11 @@ export default function HomePage() {
 
             {/* Structured Report View */}
             {report && !isLoading && (
-              <div ref={reportSectionRef} className="w-full max-w-4xl mx-auto pt-2 space-y-4">
+              <div
+                ref={reportSectionRef}
+                className="w-full max-w-4xl mx-auto pt-2 space-y-4"
+                aria-live="polite"
+              >
                 <ReportView
                   report={report}
                   userInput={input}
@@ -368,7 +331,7 @@ export default function HomePage() {
                   onConfidenceAfterChange={setConfidenceAfter}
                   onReAnalyzeWithNewInfo={(updatedText) => {
                     setInput(updatedText);
-                    handleAnalyze(updatedText, true);
+                    handleExecuteAnalyze(updatedText, true);
                   }}
                   isLoading={isLoading}
                 />
@@ -376,15 +339,15 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Footer Bar */}
-          <footer className="w-full pt-8 pb-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 select-none border-t border-slate-100/60 mt-6">
+          {/* Footer Bar Landmark */}
+          <footer className="w-full pt-8 pb-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 select-none border-t border-slate-100/60 mt-6">
             <div className="flex items-center gap-1.5 text-center sm:text-left flex-wrap justify-center sm:justify-start">
               <span>Join the community:</span>
               <a
                 href="https://discord.gg"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-800 font-semibold underline underline-offset-2 min-h-[44px] inline-flex items-center"
+                className="text-purple-600 hover:text-purple-800 font-semibold underline underline-offset-2 min-h-[44px] inline-flex items-center focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
               >
                 Join Discord
               </a>
@@ -396,19 +359,21 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={handleLanguageToggle}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200/60 shadow-xs transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200/60 shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+                aria-label={`Switch Language (Current: ${language === "en" ? "English" : "Hinglish"})`}
                 title={`Switch Language (Current: ${language === "en" ? "English" : "Hinglish"})`}
               >
-                <Languages className="w-4 h-4" />
+                <Languages className="w-4 h-4" aria-hidden="true" />
               </button>
 
               <button
                 type="button"
                 onClick={handleNewDecision}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white hover:bg-purple-50 text-slate-500 hover:text-purple-700 border border-slate-200/60 shadow-xs transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white hover:bg-purple-50 text-slate-600 hover:text-purple-700 border border-slate-200/60 shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+                aria-label="Reset Decision Canvas"
                 title="Reset Decision Canvas"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </footer>

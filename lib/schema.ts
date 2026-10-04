@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_INPUT_CHARS } from "./constants";
 
 // Base Item for overlooked factors
 export const ItemSchema = z.object({
@@ -127,7 +128,7 @@ export type Report = z.infer<typeof ReportSchema>;
 
 // Analyze Request Payload
 export const AnalyzeRequestSchema = z.object({
-  text: z.string().min(1).max(4000),
+  text: z.string().min(1).max(MAX_INPUT_CHARS),
   language: z.enum(["en", "hinglish"]).default("en"),
   force: z.boolean().optional(),
 }).strict();

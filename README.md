@@ -8,9 +8,10 @@
 
 1. **Questions Over Answers**: We do not solve your dilemma or pick a winner. We sharpen your own reasoning.
 2. **Grounded in Your Own Words**: Every implicit assumption and detected cognitive bias is linked to a verbatim quote from your input.
-3. **Strict No-Verdict Guarantee**: Two layers of defense (System Prompt instructions + Server-side string parsing guard) neutralize directive advice and recommendation language.
+3. **Strict No-Verdict Guarantee**: Two layers of defense (System Prompt instructions + Server-side regex guard) neutralize directive advice and recommendation language.
 4. **Never Crashes On Stage**: Demo-safe offline fallback automatically activates if network, rate limits, or keys fail.
 5. **Private & Local**: No database, no accounts. All session history and interactive reflection cards persist in your browser's private `localStorage`.
+6. **Accessible & Inclusive**: High-contrast typography, keyboard navigation, full screen-reader semantic landmarks, and reduced-motion compliance.
 
 ---
 
@@ -59,23 +60,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🧪 Testing & Verification
+## 🧪 Testing & Verification Scripts
 
-Run the comprehensive unit test suite (guardrails, safety, schema, clarify, coverage):
-```bash
-npm test
-```
-
-Run the build & typecheck:
-```bash
-npm run build
-npx tsc --noEmit
-```
-
-Run the automated self-verifier:
-```bash
-npm run verify
-```
+| Command | Purpose |
+|---|---|
+| `npx tsc --noEmit` | Strict TypeScript typechecking with zero errors |
+| `npm run lint` | Next.js core web vitals and ESLint code hygiene |
+| `npm test` | Vitest test suite covering safety, clarify, guard, schema, coverage, storage, markdown, and API validation |
+| `npm run build` | Full production build compiling all static and dynamic pages |
+| `npm run verify` | Automated self-verification gateway (file tree, key leaks, banned phrases) |
+| `npm run smoke` | End-to-end API smoke tests against running server |
 
 ---
 
