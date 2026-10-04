@@ -29,32 +29,99 @@ body {
 
 /* 3D Luminous Orb Styles */
 .luminous-orb {
-  background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #E3D3FF 20%, #C4A4F8 50%, #A77DF0 75%, #8B5CF6 100%);
+  background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #E8DCFF 20%, #C9ACF9 45%, #AA82F2 70%, #8B5CF6 100%);
   box-shadow: 
-    0 0 50px 10px rgba(186, 148, 255, 0.45),
-    inset 0 0 25px 5px rgba(255, 255, 255, 0.7),
-    inset -10px -10px 30px rgba(120, 60, 220, 0.4);
-  animation: floatOrb 6s ease-in-out infinite alternate;
+    0 0 55px 14px rgba(186, 148, 255, 0.5),
+    inset 0 0 25px 6px rgba(255, 255, 255, 0.8),
+    inset -10px -10px 32px rgba(120, 60, 220, 0.45);
+  animation: floatOrb 5s ease-in-out infinite alternate;
+  transform-origin: center center;
 }
 
 .luminous-orb-halo {
-  background: radial-gradient(circle, rgba(200, 165, 255, 0.35) 0%, rgba(220, 195, 255, 0.1) 60%, transparent 80%);
-  filter: blur(20px);
+  background: radial-gradient(circle, rgba(200, 165, 255, 0.45) 0%, rgba(220, 195, 255, 0.2) 50%, transparent 75%);
+  filter: blur(24px);
+  animation: pulseHalo 4s ease-in-out infinite alternate;
+}
+
+.luminous-glint {
+  animation: floatGlint 4s ease-in-out infinite alternate;
 }
 
 @keyframes floatOrb {
   0% {
-    transform: translateY(0px) scale(1);
-    box-shadow: 0 0 45px 8px rgba(186, 148, 255, 0.4), inset 0 0 25px rgba(255, 255, 255, 0.7);
+    transform: translateY(0px) rotate(0deg) scale(1);
+    box-shadow: 0 0 45px 10px rgba(186, 148, 255, 0.42), inset 0 0 25px rgba(255, 255, 255, 0.75);
   }
   50% {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 0 65px 16px rgba(186, 148, 255, 0.55), inset 0 0 30px rgba(255, 255, 255, 0.85);
+    transform: translateY(-12px) rotate(2deg) scale(1.04);
+    box-shadow: 0 0 70px 20px rgba(186, 148, 255, 0.65), inset 0 0 32px rgba(255, 255, 255, 0.9);
   }
   100% {
-    transform: translateY(0px) scale(1);
-    box-shadow: 0 0 45px 8px rgba(186, 148, 255, 0.4), inset 0 0 25px rgba(255, 255, 255, 0.7);
+    transform: translateY(0px) rotate(-1deg) scale(1);
+    box-shadow: 0 0 45px 10px rgba(186, 148, 255, 0.42), inset 0 0 25px rgba(255, 255, 255, 0.75);
   }
+}
+
+@keyframes pulseHalo {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+}
+
+@keyframes floatGlint {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(4px, -3px) scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.75;
+  }
+}
+
+/* Shimmering Animated Text */
+@keyframes shimmerText {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-shimmer-text {
+  background-size: 200% auto;
+  animation: shimmerText 3.5s ease-in-out infinite;
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float-gentle {
+  animation: floatGentle 4s ease-in-out infinite;
 }
 
 /* Glassmorphism card container */
